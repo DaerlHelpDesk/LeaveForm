@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daerl Signature Form</title>
+    <style>
+      body {
+            background-image: url('https://media.licdn.com/dms/image/C4D12AQFQldbPcGwQ6A/article-cover_image-shrink_720_1280/0/1617378278578?e=2147483647&v=beta&t=K0waM9K92qzdXQUO4QG9nKU0mQ8aWVCpnod1G5JnI2E');
+            background-size: cover; /* Cover the entire body */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Prevent the image from repeating */
+        }
+
+       header {
+    display: flex; /* Use Flexbox for layout */
+    align-items: center; /* Center items vertically */
+    padding: 20px; /* Padding around the header */
+    background-color: green; /* Set header background color to green */
+    color: white; /* Change text color to white for better contrast */
+}
+
+        .logo {
+            width: 290px;  /* Set a fixed width for logo */
+            height: auto; /* Maintain aspect ratio */
+            margin-right: 10px; /* Space between logo and heading */
+        }
+
+        #signatureCanvas {
+            border: 2px solid black;
+            margin-top: 20px;
+            width: 100%;
+            height: 200px;
+            background-color: rgba(249, 249, 249, 0.8);
+        }
+
+        #container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative; /* For absolute positioning of iframe */
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            border-radius: 5px;
+        }
+
+        #clearButton {
+            background-color: red; /* Red for clear button */
+        }
+
+        #submitButton {
+            background-color: green; /* Green for submit button */
+        }
+
+        #formIframe {
+            display: none; /* Initially hidden */
+            position: fixed; /* Cover the full page */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none; /* No border */
+            z-index: 1000; /* Ensure it's on top */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+          <header>
+       <img class="logo" src="https://raw.githubusercontent.com/DaerlHelpDesk/Daerlprojects/main/images/coa.png" alt="Logo">
+        <div class="header-text">
+            <h1>Department of Agriculture</h1>
+            <p>Agriculture, Environmental Affairs, Rural Development and Land Reform</p>
+        </div>
+		  </header>
+        <canvas id="signatureCanvas"></canvas>
+        <button id="clearButton">Clear Signature</button>
+        <button id="submitButton">Submit</button>
+    </div>
+
+    <iframe id="formIframe" src="https://forms.office.com/Pages/ResponsePage.aspx?id=IWhwSUqmPkifsHlB1MTk9uQV0oNMKv9FhbwfKeoyOatUMDlMSzEzOEpTUkRIRUM2Qk1LS1ozT05BMC4u&embed=true"></iframe>
+
+  <script>
+    const canvas = document.getElementById('signatureCanvas');
+    const context = canvas.getContext('2d');
+    let drawing = false;
+
+    // Set canvas dimensions
+    canvas.width = 900; // Desired width of the signature canvas
+    canvas.height = 200; // Desired height
+
+    // Function to start drawing
+    const startDrawing = (x, y) => {
+        drawing = true;
+        context.beginPath();
+        context.moveTo(x, y);
+    };
+
+    // Function to draw
+    const draw = (x, y) => {
+        if (drawing) {
+            context.lineTo(x, y);
+            context.stroke();
+        }
+    };
+
+    // Handle mouse events
+    canvas.addEventListener('mousedown', (e) => {
+        startDrawing(e.offsetX, e.offsetY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        draw(e.offsetX, e.offsetY);
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        drawing = false;
+        context.closePath();
+    });
+
+    canvas.addEventListener('mouseout', () => {
+        drawing = false;
+        context.closePath();
+    });
+
+    // Handle touch events
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent default touch behavior
+        const touch = e.touches[0];
+        startDrawing(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault(); // Prevent default touch behavior
+        const touch = e.touches[0];
+        draw(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
+    });
+
+    canvas.addEventListener('touchend', () => {
+        drawing = false;
+        context.closePath();
+    });
+
+    // Clear the canvas when the clear button is clicked
+    document.getElementById('clearButton').addEventListener('click', () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Check if the canvas has any drawing (signatures)
+    const hasSignature = () => {
+        const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+            // Looking for any non-transparent pixel (alpha > 0)
+            if (data[i + 3] > 0) {
+                return true; // Found a pixel that is not transparent
+            }
+        }
+        return false; // No non-transparent pixels (no signature)
+    };
+
+    // Handle submit button click
+    document.getElementById('submitButton').addEventListener('click', () => {
+        if (!hasSignature()) {
+            alert("Please provide a signature before submitting.");
+            return; // Prevent submission if no signature
+        }
+
+        const imgData = canvas.toDataURL('image/png');
+
+        // Create a download link
+        const link = document.createElement('a');
+        link.href = imgData; // Set href to the image data
+        link.download = 'signature.png'; // Set the filename
+
+        // Trigger download
+        link.click();
+
+        // Show the Microsoft Form by updating the iframe src
+        const formIframe = document.getElementById('formIframe');
+        formIframe.src = "https://forms.office.com/r/eqHFeA94qk";
+        formIframe.style.display = "block"; // Make the iframe visible
+
+        // Optionally, clear the canvas after submission
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById('container').style.display = 'none';
+    });
+</script>
+</body>
+
+</html>
